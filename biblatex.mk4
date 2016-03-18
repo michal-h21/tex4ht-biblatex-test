@@ -1,0 +1,6 @@
+Make:add("biber", "biber ${input}")
+local latexpar = {latex_par = "-interaction nonstopmode"}
+Make:htlatex(latexpar)
+Make:biber()
+Make:htlatex(latexpar)
+Make:htlatex(latexpar)
