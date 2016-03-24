@@ -55,8 +55,14 @@ local function run(filename, message, testfn)
   par.filename = filename
   test("Compile errors", 0, compile_errors(filename))
   test("DVI file exists", true, file_exists(filename .. ".dvi"))
-  test("HTML file exists", true, file_exists(filename .. ".html"))
-  testfn(test, par)
+  local htmlfile = filename .. ".html"
+  test("HTML file exists", true, file_exists(htmlfile))
+  if file_exists(htmlfile) then
+    -- run test suite passed as argument
+    local f = io.open(htmlfile, "r")
+    par.document = f:read("*all")
+    testfn(test, par)
+  end
   return tests
 end
 
@@ -81,8 +87,12 @@ local function printtests(tests)
 end
 
 printtests(run("01-introduction", "Basic author-year style", 
-  function(test)
+  function(test, par)
+    local document = par.document
+    test("Document is string", true, type(document) == "string")
+    test("Document is not empty", true, assert(string.len(document) > 0))
     -- test("pokus", true, false)
+    test("Is html", true, document:find("<html") > -1)
   end)
 )
 
