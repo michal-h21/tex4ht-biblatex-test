@@ -1,0 +1,55 @@
+local md5 = require "md5"
+
+local function load_checksums(filename)
+  local filename = filename or settings.input .. ".chck"
+  print("filename", filename)
+  local f = io.open(filename, "r")
+  if not f then return nil end
+  local contents = f:read("*all")
+  f:close()
+  local checksums = {}
+  for filename, checksum in contents:gmatch("([^%=]+)%=([^\n]+)") do
+    checksums[filename] = checksum
+    print("load", filename, checksum)
+  end
+  return checksums
+end
+
+local function is_changed(checksums,filename)
+  local old = checksums[filename] or 0
+  local newfile = io.open(filename, "r")
+  local contents = ""
+  if newfile then
+    contents = newfile:read("*all")
+  end
+  local new = md5.sumhexa(contents)
+  checksums[filename] = new
+  print(old, new)
+  return old == new
+end
+
+
+settings.checksums = load_checksums()
+
+Make:add("conditional", function(newpar)
+  -- return function(newpar)
+    print("conditiona")
+    local locpar = {}
+    -- for k,v in pairs(par) do locpar[k] = v end
+    for k,v in pairs(newpar) do locpar[k] = v end
+    local checksums = locpar.checksums or {} 
+    local command = locpar.command or ""
+    print("commandY", command)
+    local watch = locpar.watch or {}
+    local run = #watch == 0 -- always run if we don't watch any files
+    for _, file in ipairs(watch) do
+      local filename = file:gsub("?", locpar.input)
+      run = run or is_changed(checksums, filename)
+      print("watch", filename)
+    end
+    return true
+  -- end
+end)
+
+
+Make:conditional {command = "htlatex", watch = {"?.aux", "?.xref","?.4od"}}
