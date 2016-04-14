@@ -2,17 +2,27 @@ local md5 = require "md5"
 
 local function load_checksums(filename)
   local filename = filename or settings.input .. ".chck"
+  local checksums = {}
+  checksums.filename = filename
   print("filename", filename)
   local f = io.open(filename, "r")
-  if not f then return nil end
+  if not f then return checksums end
   local contents = f:read("*all")
   f:close()
-  local checksums = {}
   for filename, checksum in contents:gmatch("([^%=]+)%=([^\n]+)") do
     checksums[filename] = checksum
     print("load", filename, checksum)
   end
   return checksums
+end
+
+local function save_checksums(checksums)
+  local filename = checksums.filename
+  local f = io.open(filename, "w")
+  for k,v in pairs(checksums) do
+    f:write(string.format("%s=%s\n", k,v))
+  end
+  f:close()
 end
 
 local function is_changed(checksums,filename)
@@ -24,8 +34,8 @@ local function is_changed(checksums,filename)
   end
   local new = md5.sumhexa(contents)
   checksums[filename] = new
-  print(old, new)
-  return old == new
+  print(filename, old, new)
+  return old ~= new
 end
 
 
@@ -44,12 +54,18 @@ Make:add("conditional", function(newpar)
     local run = #watch == 0 -- always run if we don't watch any files
     for _, file in ipairs(watch) do
       local filename = file:gsub("?", locpar.input)
-      run = run or is_changed(checksums, filename)
-      print("watch", filename)
+      run = is_changed(checksums, filename) or run
+      print("watch", filename, run)
     end
+    locpar.checksums = checksums
+    save_checksums(settings.checksums)
     return true
   -- end
 end)
 
 
 Make:conditional {command = "htlatex", watch = {"?.aux", "?.xref","?.4od"}}
+Make:conditional {command = "htlatex", watch = {"?.aux", "?.xref","?.4od"}}
+Make:conditional {command = "htlatex", watch = {"?.aux", "?.xref","?.4od"}}
+
+for k,v in pairs(settings.checksums) do print("checksumL",k, v) end
